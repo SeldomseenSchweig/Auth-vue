@@ -29,11 +29,11 @@ export default createStore({
           case "auth/user-not-found":
             alert("User Not Found");
             break;
-          case "auth/wrong-password":
+          case "auth/invalid-credential":
             alert("Wrong Password");
             break;
           default:
-            alert("something went wrong");
+            alert(error.code);
         }
         return;
       }
@@ -42,9 +42,13 @@ export default createStore({
       router.push("/");
     },
     async logout({ commit }) {
-      await signOut(auth);
-      commit("CLEAR_USER");
-      router.push("login");
+      try {
+        await signOut(auth);
+        commit("CLEAR_USER");
+        router.push("/login");
+      } catch (error) {
+        console.error("Error logging out:", error.message);
+      }
     },
     async register({ commit }, details) {
       const { email, password } = details;
@@ -58,20 +62,33 @@ export default createStore({
           case "auth/invalid-email":
             alert("Invalid email");
             break;
-          case "auth/operation not allowed":
+          case "auth/operation-not-allowed":
             alert("Operation Not allowed");
             break;
           case "auth/weak-password":
             alert("Weak Password");
             break;
           default:
-            alert("something went wrong");
+            alert(error.code);
         }
         return;
       }
       commit("SET_USER", auth.currentUser);
 
       router.push("/");
+    },
+
+    fetchUser({ commit }) {
+      auth.onAuthStateChanged(async (user) => {
+        if (user === null) {
+          commit("CLEAR_USER");
+        } else {
+          commit("SET_USER", user);
+          if (router.isReady() && router.currentRoute.value.path === "/login") {
+            router.push("/");
+          }
+        }
+      });
     },
   },
 });
